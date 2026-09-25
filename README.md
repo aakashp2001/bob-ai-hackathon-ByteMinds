@@ -1,25 +1,21 @@
 # 🚀 [Your Project Title Here]
 
-> ⚠️ **Replace everything in `[ ]` brackets with your actual content before submission.**
-
 ---
 
 ## 👥 Team
 
 | Field | Value |
 |---|---|
-| **Team Name** | [Your Team Name] |
+| **Team Name** | ByteMind |
 | **Track** | [AI / DevOps / Sustainability / Open] |
-| **Team Lead** | [Name] — [email@ibm.com] |
-| **Members** | [Name 1], [Name 2], [Name 3] |
+| **Team Lead** | Aakash Prajapati - aakash.20042001@gmail.com |
+| **Members** | Haard Mehta, Harsh Panchal, Jiregna Tolera |
 
 ---
 
 ## 🎯 Problem Statement
 
-> In 2–3 sentences: What problem does your project solve? Who experiences this problem?
-
-[Describe the real-world problem your project addresses. Be specific about who the user is and what pain point they face.]
+Build a Bob-powered case coordination tool that takes family-provided data plus mock investigator tip logs and CCTV sighting descriptions. Bob correlates inputs, generates a prioritized list of investigative leads with recommended next actions, drafts a public appeal notice, and auto-fills a police missing person case file.
 
 ---
 
