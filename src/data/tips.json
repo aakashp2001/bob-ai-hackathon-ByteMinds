@@ -1,0 +1,50 @@
+[
+  {
+    "tipId": "T001",
+    "dateTime": "2026-09-23T18:32:00",
+    "source": "Witness",
+    "description": "A young man wearing a blue hoodie and black jeans was seen walking toward the pedestrian bridge near Riverfront Park."
+  },
+  {
+    "tipId": "T002",
+    "dateTime": "2026-09-23T19:05:00",
+    "source": "Anonymous",
+    "description": "Someone resembling the missing person was seen near a city bus stop."
+  },
+  {
+    "tipId": "T003",
+    "dateTime": "2026-09-23T18:51:00",
+    "source": "Shopkeeper",
+    "description": "A person carrying a black backpack with a grey stripe passed the shop near the pedestrian bridge."
+  },
+  {
+    "tipId": "T004",
+    "dateTime": "2026-09-23T20:20:00",
+    "source": "Anonymous",
+    "description": "A person wearing a red jacket was seen near the railway station."
+  },
+  {
+    "tipId": "T005",
+    "dateTime": "2026-09-24T09:10:00",
+    "source": "Witness",
+    "description": "A person with black hair and a medium build was seen near a tea stall."
+  },
+  {
+    "tipId": "T006",
+    "dateTime": "2026-09-23T18:43:00",
+    "source": "Witness",
+    "description": "A person with a black backpack was walking toward the east side of the river."
+  },
+  {
+    "tipId": "T007",
+    "dateTime": "2026-09-23T21:30:00",
+    "source": "Anonymous",
+    "description": "Someone named Aarav may have been seen near a shopping complex."
+  },
+  {
+    "tipId": "T008",
+    "dateTime": "2026-09-24T11:00:00",
+    "source": "Anonymous",
+    "description": "A person wearing white shoes was noticed near a residential area."
+  }
+]

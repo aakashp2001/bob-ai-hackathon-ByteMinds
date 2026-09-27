@@ -1,0 +1,31 @@
+{
+  "caseNumber": "MP-2026-0042",
+  "name": "Aarav Shah",
+  "aliases": ["Aarav"],
+  "dateOfBirth": "2004-03-14",
+  "age": 22,
+  "physicalDescription": {
+    "heightCm": 178,
+    "build": "medium",
+    "hairColor": "black",
+    "eyeColor": "brown",
+    "identifyingMarks": [
+      "small scar above right eyebrow"
+    ]
+  },
+  "clothing": {
+    "top": "blue hoodie",
+    "bottom": "black jeans",
+    "shoes": "white sneakers",
+    "bag": "black backpack with grey stripe"
+  },
+  "lastSeen": {
+    "dateTime": "2026-09-23T18:10:00",
+    "location": "Riverfront Park, Ahmedabad"
+  },
+  "contact": {
+    "name": "Meera Shah",
+    "phone": "+91-90000-00001"
+  },
+  "notes": "Family reports no confirmed contact since last known sighting."
+}
