@@ -52,13 +52,35 @@ Retrieves backend correlation results without recalculating scores. These result
 - **Input:** `caseNumber` (string) - Fictional missing-person case number.
 - **Returns:** Analysis results including potential leads and their confidence scores.
 
-## Backend Implementation
+## Backend Integration
 
-The MCP server acts as a bridge to a mock backend client defined in `src/mcp/backendClient.js`.
+The MCP server acts as an HTTP bridge to the FastAPI backend through
+`src/mcp/backendClient.js`. It does not duplicate the backend correlation or
+scoring algorithm.
 
-- **Data Source:** `src/integration/mockCaseData.json`
-- **Normalization:** Case numbers are automatically trimmed and converted to uppercase.
-- **Error Handling:** The backend client maps internal errors to MCP-compatible error responses.
+| MCP operation | Backend route | Method |
+|---|---|---|
+| Person profile | `/case` | GET |
+| Investigator tips | `/tips` | GET |
+| CCTV sightings | `/cctv` | GET |
+| Correlation results | `/analyze` | GET |
+
+The current backend serves the fictional case `MP-2026-0042` and does not take
+the case number as a query parameter. The MCP adapter validates that the
+backend response belongs to the requested case and returns `CASE_NOT_FOUND`
+when it does not.
+
+Configure the backend connection with:
+
+```text
+BACKEND_BASE_URL=http://localhost:8000
+BACKEND_TIMEOUT_MS=10000
+DEFAULT_CASE_NUMBER=MP-2026-0042
+```
+
+Case numbers are automatically trimmed and converted to uppercase. The MCP
+client preserves the backend's lead score, source record IDs, evidence, and
+recommended action unchanged.
 
 ### Error Codes
 | Code | Description |
@@ -70,6 +92,20 @@ The MCP server acts as a bridge to a mock backend client defined in `src/mcp/bac
 
 ## Development and Testing
 
+Start the backend from the repository root:
+
+```bash
+python -m pip install -r requirements.txt
+python -m uvicorn src.backend.app:app --host 127.0.0.1 --port 8000
+```
+
+In a second terminal, start the MCP server:
+
+```bash
+npm install
+npm start
+```
+
 ### Testing
 Tests for the backend client and MCP logic are located in `tests/mcp/`.
 To run tests:
@@ -79,6 +115,6 @@ npm test
 
 ### Extending the Server
 To add a new tool:
-1. Define the logic in `src/mcp/backendClient.js`.
+1. Define the backend request or response adaptation in `src/mcp/backendClient.js`.
 2. Register the tool in `src/mcp/server.js` using `server.registerTool`.
 3. Define the input schema using `zod`.

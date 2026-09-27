@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
 
 import {
   getPersonProfile,
@@ -10,6 +11,52 @@ import {
   getBackendErrorInfo,
   normalizeCaseNumber
 } from '../../src/mcp/backendClient.js';
+
+const backendPayloads = {
+  profile: {
+    caseNumber: 'MP-2026-0042',
+    name: 'Aarav Shah',
+    aliases: ['Aarav']
+  },
+  tips: [{ tipId: 'T001', description: 'Blue hoodie near the bridge.' }],
+  cctv: [{ sightingId: 'C001', cameraLocation: 'Riverfront Pedestrian Bridge' }],
+  analysis: {
+    caseNumber: 'MP-2026-0042',
+    totalEvidenceRecords: 2,
+    totalLeads: 1,
+    leads: [{
+      leadId: 'L001',
+      sourceRecordIds: ['T001', 'C001'],
+      score: 85,
+      matchingEvidence: ['Blue hoodie'],
+      conflictingEvidence: [],
+      recommendedNextAction: 'Verify the sighting.'
+    }]
+  }
+};
+
+const backendServer = createServer((request, response) => {
+  const payloads = {
+    '/case': backendPayloads.profile,
+    '/tips': backendPayloads.tips,
+    '/cctv': backendPayloads.cctv,
+    '/analyze': backendPayloads.analysis
+  };
+  const payload = payloads[request.url];
+  if (!payload) {
+    response.writeHead(404, { 'content-type': 'application/json' });
+    response.end(JSON.stringify({ detail: 'Not found' }));
+    return;
+  }
+  response.writeHead(200, { 'content-type': 'application/json' });
+  response.end(JSON.stringify(payload));
+});
+
+await new Promise((resolve) => backendServer.listen(0, '127.0.0.1', resolve));
+process.env.BACKEND_BASE_URL = `http://127.0.0.1:${backendServer.address().port}`;
+process.env.BACKEND_TIMEOUT_MS = '1000';
+
+test.after(() => backendServer.close());
 
 test('normalizeCaseNumber trims and uppercases case numbers', () => {
   assert.equal(normalizeCaseNumber(' mp-2026-0042 '), 'MP-2026-0042');
@@ -47,7 +94,6 @@ test('getCaseData returns the combined case context', async () => {
 test('getCorrelationResults returns the backend score unchanged', async () => {
   const result = await getCorrelationResults('MP-2026-0042');
   assert.equal(result.caseNumber, 'MP-2026-0042');
-  assert.equal(result.scoringVersion, '1.0');
   assert.equal(result.leads[0].score, 85);
 });
 

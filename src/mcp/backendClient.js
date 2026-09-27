@@ -1,12 +1,3 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const projectRoot = path.resolve(__dirname, '..', '..');
-const dataFilePath = path.join(projectRoot, 'src', 'integration', 'mockCaseData.json');
-
 const ERROR_MAP = {
   CASE_NOT_FOUND: {
     code: 'CASE_NOT_FOUND',
@@ -50,67 +41,118 @@ export function getBackendErrorInfo(code, extra = {}) {
   return createBackendError(code, extra);
 }
 
-async function readCaseDataFile() {
-  const raw = await fs.readFile(dataFilePath, 'utf8');
-  return JSON.parse(raw);
+async function requestBackend(pathname, caseNumber) {
+  const normalized = normalizeCaseNumber(caseNumber);
+  const controller = new AbortController();
+  const backendBaseUrl = (process.env.BACKEND_BASE_URL || 'http://localhost:8000').replace(/\/$/, '');
+  const backendTimeoutMs = Number.parseInt(process.env.BACKEND_TIMEOUT_MS || '10000', 10);
+  const timeout = setTimeout(() => controller.abort(), backendTimeoutMs);
+
+  try {
+    let response;
+    try {
+      response = await fetch(`${backendBaseUrl}${pathname}`, {
+        signal: controller.signal,
+        headers: { accept: 'application/json' }
+      });
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        throw createBackendError('BACKEND_TIMEOUT', { caseNumber: normalized });
+      }
+      throw createBackendError('BACKEND_UNAVAILABLE', { caseNumber: normalized });
+    }
+
+    if (response.status === 404) {
+      throw createBackendError('CASE_NOT_FOUND', { caseNumber: normalized });
+    }
+
+    if (!response.ok) {
+      throw createBackendError('BACKEND_UNAVAILABLE', { caseNumber: normalized, status: response.status });
+    }
+
+    let payload;
+    try {
+      payload = await response.json();
+    } catch {
+      throw createBackendError('INVALID_BACKEND_RESPONSE', { caseNumber: normalized });
+    }
+
+    if (payload === null || typeof payload !== 'object') {
+      throw createBackendError('INVALID_BACKEND_RESPONSE', { caseNumber: normalized });
+    }
+
+    return payload;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
-function extractCaseRecord(caseNumber, dataset) {
+function assertCaseNumber(payload, caseNumber) {
   const normalized = normalizeCaseNumber(caseNumber);
-  const caseRecord = dataset?.caseNumber === normalized ? dataset : null;
-  if (!caseRecord) {
+  if (payload.caseNumber && normalizeCaseNumber(payload.caseNumber) !== normalized) {
     throw createBackendError('CASE_NOT_FOUND', { caseNumber: normalized });
   }
-  return caseRecord;
+  return normalized;
 }
 
 export async function getPersonProfile(caseNumber) {
-  const dataset = await readCaseDataFile();
-  const caseRecord = extractCaseRecord(caseNumber, dataset);
-  return caseRecord.personProfile;
+  const profile = await requestBackend('/case', caseNumber);
+  assertCaseNumber(profile, caseNumber);
+  return {
+    ...profile,
+    sourceType: 'family_provided'
+  };
 }
 
 export async function getInvestigatorTips(caseNumber) {
-  const dataset = await readCaseDataFile();
-  const caseRecord = extractCaseRecord(caseNumber, dataset);
+  const tips = await requestBackend('/tips', caseNumber);
+  const normalized = normalizeCaseNumber(caseNumber);
+  if (!Array.isArray(tips)) {
+    throw createBackendError('INVALID_BACKEND_RESPONSE', { caseNumber: normalized });
+  }
   return {
-    caseNumber: caseRecord.caseNumber,
+    caseNumber: normalized,
     sourceType: 'investigator_tips',
-    tips: caseRecord.investigatorTips
+    tips
   };
 }
 
 export async function getCctvSightings(caseNumber) {
-  const dataset = await readCaseDataFile();
-  const caseRecord = extractCaseRecord(caseNumber, dataset);
+  const sightings = await requestBackend('/cctv', caseNumber);
+  const normalized = normalizeCaseNumber(caseNumber);
+  if (!Array.isArray(sightings)) {
+    throw createBackendError('INVALID_BACKEND_RESPONSE', { caseNumber: normalized });
+  }
   return {
-    caseNumber: caseRecord.caseNumber,
+    caseNumber: normalized,
     sourceType: 'cctv_sightings',
-    sightings: caseRecord.cctvSightings
+    sightings
   };
 }
 
 export async function getCaseData(caseNumber) {
-  const dataset = await readCaseDataFile();
-  const caseRecord = extractCaseRecord(caseNumber, dataset);
+  const normalized = normalizeCaseNumber(caseNumber);
+  const [personProfile, investigatorTips, cctvSightings] = await Promise.all([
+    getPersonProfile(normalized),
+    getInvestigatorTips(normalized),
+    getCctvSightings(normalized)
+  ]);
   return {
-    caseNumber: caseRecord.caseNumber,
-    personProfile: caseRecord.personProfile,
-    investigatorTips: caseRecord.investigatorTips,
-    cctvSightings: caseRecord.cctvSightings
+    caseNumber: normalized,
+    personProfile,
+    investigatorTips: investigatorTips.tips,
+    cctvSightings: cctvSightings.sightings
   };
 }
 
 export async function getCorrelationResults(caseNumber) {
-  const dataset = await readCaseDataFile();
-  const caseRecord = extractCaseRecord(caseNumber, dataset);
-  if (!caseRecord.analysis || !caseRecord.analysis.leads) {
-    throw createBackendError('CORRELATION_UNAVAILABLE', { caseNumber });
+  const analysis = await requestBackend('/analyze', caseNumber);
+  const normalized = assertCaseNumber(analysis, caseNumber);
+  if (!Array.isArray(analysis.leads)) {
+    throw createBackendError('CORRELATION_UNAVAILABLE', { caseNumber: normalized });
   }
   return {
-    caseNumber: caseRecord.analysis.caseNumber,
-    scoringVersion: caseRecord.analysis.scoringVersion,
-    generatedAt: caseRecord.analysis.generatedAt,
-    leads: caseRecord.analysis.leads
+    ...analysis,
+    caseNumber: normalized
   };
 }
