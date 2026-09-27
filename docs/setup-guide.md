@@ -6,14 +6,13 @@
 
 Before you begin, ensure you have the following installed:
 
-- [ ] [e.g., Python 3.11+]
-- [ ] [e.g., Node.js 18+]
-- [ ] [e.g., Docker Desktop]
-- [ ] [e.g., An IBM Cloud account with watsonx.ai access]
+- [ ] Python 3.10+
+- [ ] Node.js 18+
+- [ ] IBM Bob with project-local MCP support
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and fill in the values:
+Copy `src/.env.example` to `.env` if you need to override defaults:
 
 ```bash
 cp .env.example .env
@@ -21,10 +20,9 @@ cp .env.example .env
 
 | Variable | Description | Required |
 |---|---|---|
-| `WATSONX_API_KEY` | Your IBM watsonx.ai API key | Yes |
-| `WATSONX_PROJECT_ID` | Your watsonx.ai project ID | Yes |
-| `DATABASE_URL` | PostgreSQL connection string | Yes |
-| `SLACK_WEBHOOK_URL` | Slack webhook for alerts | No |
+| `BACKEND_BASE_URL` | FastAPI backend URL | No, defaults to `http://localhost:8000` |
+| `BACKEND_TIMEOUT_MS` | MCP backend request timeout | No, defaults to `10000` |
+| `DEFAULT_CASE_NUMBER` | Default fictional case | No, defaults to `MP-2026-0042` |
 
 ## Installation
 
@@ -33,32 +31,36 @@ cp .env.example .env
 git clone https://github.com/[your-org]/[your-repo].git
 cd [your-repo]
 
-# 2. Install backend dependencies
-[your command — e.g.: pip install -r requirements.txt]
+# 2. Create and activate the Python environment
+python -m venv .venv
+# Windows PowerShell:
+.\.venv\Scripts\Activate.ps1
 
-# 3. Install frontend dependencies (if applicable)
-[your command — e.g.: cd frontend && npm install]
+# 3. Install backend dependencies
+python -m pip install -r requirements.txt
 
-# 4. Set up the database (if applicable)
-[your command — e.g.: python manage.py migrate]
+# 4. Install MCP dependencies
+npm install
 ```
 
 ## Running the Application
 
 ```bash
 # Start the backend
-[your command — e.g.: uvicorn app.main:app --reload]
+python -m uvicorn src.backend.app:app --host 127.0.0.1 --port 8000
 
-# Start the frontend (in a separate terminal, if applicable)
-[your command — e.g.: cd frontend && npm run dev]
+# In a second terminal, start the MCP server for Bob
+npm start
 ```
 
-The application will be available at: `http://localhost:[PORT]`
+The backend will be available at: `http://localhost:8000`.
+Bob discovers the MCP server through `.bob/mcp.json` when the repository is
+opened at the project root.
 
 ## Running Tests
 
 ```bash
-[your test command — e.g.: pytest tests/ -v]
+npm test
 ```
 
 ## Quick Demo (Optional)

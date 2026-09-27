@@ -73,8 +73,8 @@ Build a Bob-powered case coordination tool that takes family-provided data plus 
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/[your-repo].git
-cd [your-repo]
+git clone https://github.com/aakashp2001/bob-ai-hackathon-ByteMinds.git
+cd bob-ai-hackathon-ByteMinds
 
 # 2. Install dependencies
 [your install command here]

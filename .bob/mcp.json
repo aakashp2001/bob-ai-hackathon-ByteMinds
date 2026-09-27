@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "missing-person-case": {
+      "command": "node",
+      "args": ["src/mcp/server.js"],
+      "cwd": ".",
+      "env": {
+        "BACKEND_BASE_URL": "http://localhost:8000",
+        "BACKEND_TIMEOUT_MS": "10000",
+        "DEFAULT_CASE_NUMBER": "MP-2026-0042"
+      },
+      "alwaysAllow": [
+        "get_person_profile",
+        "get_investigator_tips",
+        "get_cctv_sightings",
+        "get_case_data",
+        "get_correlation_results"
+      ],
+      "disabled": false
+    }
+  }
+}

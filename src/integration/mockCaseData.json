@@ -1,0 +1,103 @@
+{
+  "caseNumber": "MP-2026-0042",
+  "personProfile": {
+    "caseNumber": "MP-2026-0042",
+    "sourceType": "family_provided",
+    "name": "Aarav Shah",
+    "aliases": ["Aarav"],
+    "dateOfBirth": "2004-03-14",
+    "age": 22,
+    "physicalDescription": {
+      "heightCm": 178,
+      "build": "medium",
+      "hairColor": "black",
+      "eyeColor": "brown",
+      "identifyingMarks": ["small scar above right eyebrow"]
+    },
+    "clothing": {
+      "top": "blue hoodie",
+      "bottom": "black jeans",
+      "shoes": "white sneakers",
+      "bag": "black backpack with grey stripe"
+    },
+    "lastSeen": {
+      "dateTime": "2026-09-23T18:10:00",
+      "location": "Riverfront Park, Ahmedabad"
+    },
+    "contact": {
+      "name": "Meera Shah",
+      "phone": "+91-90000-00001"
+    }
+  },
+  "investigatorTips": [
+    {
+      "tipId": "T001",
+      "dateTime": "2026-09-23T18:32:00",
+      "source": "Witness",
+      "description": "A young man matching the missing person's general build was seen near the riverfront food stall shortly after sunset, wearing a blue hoodie and carrying a black backpack."
+    },
+    {
+      "tipId": "T002",
+      "dateTime": "2026-09-23T19:05:00",
+      "source": "Transit worker",
+      "description": "A commuter reported a person with a blue hoodie and white sneakers heading toward the east platform, but said the clothing could have been similar to other riders."
+    },
+    {
+      "tipId": "T003",
+      "dateTime": "2026-09-24T07:10:00",
+      "source": "Family friend",
+      "description": "The family friend recalled the subject had a small scar above the right eyebrow and often wore black jeans with a grey-stripe backpack."
+    }
+  ],
+  "cctvSightings": [
+    {
+      "sightingId": "C001",
+      "cameraLocation": "Riverfront Pedestrian Bridge",
+      "dateTime": "2026-09-23T18:36:00",
+      "description": "A person wearing a blue hoodie and black jeans is visible on a pedestrian bridge, moving quickly toward the western exit. The footage does not confirm identity and is limited by lighting and angle.",
+      "imageUrl": null
+    },
+    {
+      "sightingId": "C002",
+      "cameraLocation": "City Bus Stand",
+      "dateTime": "2026-09-23T18:51:00",
+      "description": "A lone rider carrying a black backpack is seen near the bus stand. The description is consistent with the family-reported clothing but cannot establish identity with certainty.",
+      "imageUrl": null
+    }
+  ],
+  "analysis": {
+    "caseNumber": "MP-2026-0042",
+    "scoringVersion": "1.0",
+    "generatedAt": "2026-09-26T10:00:00Z",
+    "leads": [
+      {
+        "leadId": "L001",
+        "sourceRecordIds": ["T001", "C001"],
+        "score": 85,
+        "matchingEvidence": [
+          "Blue hoodie matches the family-provided clothing description.",
+          "Black jeans are consistent with the witness and CCTV descriptions."
+        ],
+        "conflictingEvidence": [
+          "No direct identifier confirms the person is the missing person."
+        ],
+        "uncertainty": "Identity is not established by the available descriptions.",
+        "recommendedNextAction": "Verify the sighting details with the witness and request the bridge camera footage for a more complete time window."
+      },
+      {
+        "leadId": "L002",
+        "sourceRecordIds": ["T003", "C002"],
+        "score": 72,
+        "matchingEvidence": [
+          "The scar description and backpack style align with the family profile.",
+          "The bus stand footage shows a black backpack consistent with the reported bag."
+        ],
+        "conflictingEvidence": [
+          "The witness account does not include a verified identifier or direct visual comparison."
+        ],
+        "uncertainty": "The available evidence suggests a possible similarity but does not confirm identity.",
+        "recommendedNextAction": "Check nearby transit CCTV and ask the family to confirm whether the reported bag stripe and clothing style match the subject."
+      }
+    ]
+  }
+}
