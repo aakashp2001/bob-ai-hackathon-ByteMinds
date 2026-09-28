@@ -3,48 +3,168 @@
     "tipId": "T001",
     "dateTime": "2026-09-23T18:32:00",
     "source": "Witness",
-    "description": "A young man wearing a blue hoodie and black jeans was seen walking toward the pedestrian bridge near Riverfront Park."
+    "description": "A young man wearing a blue hoodie and black jeans was seen walking toward the pedestrian bridge.",
+    "observedName": null,
+    "location": "Riverfront Pedestrian Bridge, Ahmedabad",
+    "clothing": {
+      "top": "blue hoodie",
+      "bottom": "black jeans",
+      "footwear": null,
+      "backpack": null
+    },
+    "physical": {
+      "heightCm": null,
+      "build": null,
+      "hair": null,
+      "eyes": null,
+      "identifyingMark": null
+    }
   },
   {
     "tipId": "T002",
     "dateTime": "2026-09-23T19:05:00",
     "source": "Anonymous",
-    "description": "Someone resembling the missing person was seen near a city bus stop."
+    "description": "A person resembling the missing individual was seen near the central bus stop.",
+    "observedName": null,
+    "location": "Central Bus Stop, Ahmedabad",
+    "clothing": {
+      "top": null,
+      "bottom": null,
+      "footwear": null,
+      "backpack": null
+    },
+    "physical": {
+      "heightCm": null,
+      "build": null,
+      "hair": null,
+      "eyes": null,
+      "identifyingMark": null
+    }
   },
   {
     "tipId": "T003",
     "dateTime": "2026-09-23T18:51:00",
     "source": "Shopkeeper",
-    "description": "A person carrying a black backpack with a grey stripe passed the shop near the pedestrian bridge."
+    "description": "A person carrying a black backpack with a grey stripe was seen near the pedestrian bridge.",
+    "observedName": null,
+    "location": "Riverfront Pedestrian Bridge, Ahmedabad",
+    "clothing": {
+      "top": null,
+      "bottom": null,
+      "footwear": null,
+      "backpack": "black backpack with grey stripe"
+    },
+    "physical": {
+      "heightCm": null,
+      "build": null,
+      "hair": null,
+      "eyes": null,
+      "identifyingMark": null
+    }
   },
   {
     "tipId": "T004",
     "dateTime": "2026-09-23T20:20:00",
     "source": "Anonymous",
-    "description": "A person wearing a red jacket was seen near the railway station."
+    "description": "A person wearing a red jacket was seen near the railway station.",
+    "observedName": null,
+    "location": "Railway Station Gate 2, Ahmedabad",
+    "clothing": {
+      "top": "red jacket",
+      "bottom": null,
+      "footwear": null,
+      "backpack": null
+    },
+    "physical": {
+      "heightCm": null,
+      "build": null,
+      "hair": null,
+      "eyes": null,
+      "identifyingMark": null
+    }
   },
   {
     "tipId": "T005",
     "dateTime": "2026-09-24T09:10:00",
     "source": "Witness",
-    "description": "A person with black hair and a medium build was seen near a tea stall."
+    "description": "A person with black hair and medium build was seen near a tea stall.",
+    "observedName": null,
+    "location": "Tea Stall Area, Ahmedabad",
+    "clothing": {
+      "top": null,
+      "bottom": null,
+      "footwear": null,
+      "backpack": null
+    },
+    "physical": {
+      "heightCm": null,
+      "build": "medium",
+      "hair": "black",
+      "eyes": null,
+      "identifyingMark": null
+    }
   },
   {
     "tipId": "T006",
     "dateTime": "2026-09-23T18:43:00",
     "source": "Witness",
-    "description": "A person with a black backpack was walking toward the east side of the river."
+    "description": "A person carrying a black backpack was seen walking toward the east side of the river.",
+    "observedName": null,
+    "location": "East River Road, Ahmedabad",
+    "clothing": {
+      "top": null,
+      "bottom": null,
+      "footwear": null,
+      "backpack": "black backpack"
+    },
+    "physical": {
+      "heightCm": null,
+      "build": null,
+      "hair": null,
+      "eyes": null,
+      "identifyingMark": null
+    }
   },
   {
     "tipId": "T007",
     "dateTime": "2026-09-23T21:30:00",
     "source": "Anonymous",
-    "description": "Someone named Aarav may have been seen near a shopping complex."
+    "description": "Someone named Aarav was seen near the shopping complex.",
+    "observedName": "Aarav",
+    "location": "Shopping Complex, Ahmedabad",
+    "clothing": {
+      "top": null,
+      "bottom": null,
+      "footwear": null,
+      "backpack": null
+    },
+    "physical": {
+      "heightCm": null,
+      "build": null,
+      "hair": null,
+      "eyes": null,
+      "identifyingMark": null
+    }
   },
   {
     "tipId": "T008",
     "dateTime": "2026-09-24T11:00:00",
     "source": "Anonymous",
-    "description": "A person wearing white shoes was noticed near a residential area."
+    "description": "A person wearing white shoes was seen near a residential area.",
+    "observedName": null,
+    "location": "Residential Area, Ahmedabad",
+    "clothing": {
+      "top": null,
+      "bottom": null,
+      "footwear": "white shoes",
+      "backpack": null
+    },
+    "physical": {
+      "heightCm": null,
+      "build": null,
+      "hair": null,
+      "eyes": null,
+      "identifyingMark": null
+    }
   }
 ]

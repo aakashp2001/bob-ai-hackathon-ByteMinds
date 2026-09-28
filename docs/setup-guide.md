@@ -78,4 +78,4 @@ If you have a demo script or sample data to showcase the project quickly:
 |---|---|
 | [e.g., `ModuleNotFoundError`] | [e.g., Run `pip install -r requirements.txt` again] |
 | [e.g., Database connection refused] | [e.g., Ensure PostgreSQL is running: `docker compose up db`] |
-| [e.g., watsonx.ai 401 error] | [e.g., Check `WATSONX_API_KEY` in your `.env` file] |
+| [e.g., NVIDIA API 401 error] | Check `NVIDIA_API_KEY` in your local environment. |

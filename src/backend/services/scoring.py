@@ -2,735 +2,704 @@ import re
 from datetime import datetime
 
 
-# =========================================================
-# 1. TEXT NORMALIZATION
-# =========================================================
-
-def normalize_text(text):
+def normalize_text(value):
     """
-    Converts text into a standard format.
+    Normalize text for deterministic comparisons.
     """
-
-    if not text:
+    if value is None:
         return ""
 
-    text = text.lower()
+    value = str(value).lower()
 
-    # Treat hyphens as spaces
-    text = text.replace("-", " ")
+    replacements = {
+        "-": " ",
+        "_": " ",
+    }
 
-    # Remove punctuation
-    text = re.sub(r"[^a-z0-9\s]", "", text)
+    for old, new in replacements.items():
+        value = value.replace(old, new)
 
-    # Replace multiple spaces with one
-    text = re.sub(r"\s+", " ", text)
+    value = re.sub(r"[^\w\s]", " ", value)
+    value = re.sub(r"\s+", " ", value).strip()
 
-    return text.strip()
+    return value
 
 
-def text_contains(text, phrase):
+def text_tokens(value):
+    return set(normalize_text(value).split())
+
+
+def same_text(observed, expected):
     """
-    Checks whether a phrase exists as complete words
-    inside the normalized text.
+    Returns True when two descriptions are equivalent or
+    one is a subset of the other.
     """
-
-    text = normalize_text(text)
-    phrase = normalize_text(phrase)
-
-    if not text or not phrase:
+    if not observed or not expected:
         return False
 
-    text_words = set(text.split())
-    phrase_words = phrase.split()
+    observed_normalized = normalize_text(observed)
+    expected_normalized = normalize_text(expected)
 
-    return all(word in text_words for word in phrase_words)
+    if observed_normalized == expected_normalized:
+        return True
 
+    observed_tokens = text_tokens(observed)
+    expected_tokens = text_tokens(expected)
 
-# =========================================================
-# 2. NAME / ALIAS
-# Maximum: 30
-# =========================================================
+    if observed_tokens and observed_tokens.issubset(expected_tokens):
+        return True
 
-def name_match_score(profile, evidence_text):
+    if expected_tokens and expected_tokens.issubset(observed_tokens):
+        return True
 
-    text = normalize_text(evidence_text)
-
-    name = normalize_text(profile["name"])
-
-    if name and name in text:
-        return 30
-
-    for alias in profile.get("aliases", []):
-        alias = normalize_text(alias)
-
-        if alias and alias in text:
-            return 30
-
-    return 0
+    return False
 
 
-# =========================================================
-# 3. LOCATION
-# Maximum: 25
-# =========================================================
+def compatible_clothing(observed, expected):
+    """
+    Determines whether an observed clothing description
+    is compatible with the missing person's profile.
 
-def location_match_score(profile, evidence_location):
+    This is deterministic and does not infer identity.
+    """
+    if not observed or not expected:
+        return False
 
-    if not evidence_location:
-        return 0
+    if same_text(observed, expected):
+        return True
 
-    location = normalize_text(evidence_location)
-    last_seen = normalize_text(profile["lastSeen"]["location"])
-
-    # Exact location
-    if location == last_seen:
-        return 25
-
-    # Clearly connected Riverfront locations
-    riverfront_locations = [
-        "riverfront pedestrian bridge",
-        "east river road",
-        "riverfront parking"
+    footwear_groups = [
+        {"shoe", "shoes", "sneaker", "sneakers"},
+        {"trainer", "trainers"},
     ]
 
-    if location in riverfront_locations:
-        return 20
+    observed_tokens = text_tokens(observed)
+    expected_tokens = text_tokens(expected)
 
-    # Broader nearby location
-    nearby_locations = [
-        "central bus stop"
-    ]
+    for group in footwear_groups:
+        if (
+            observed_tokens.intersection(group)
+            and expected_tokens.intersection(group)
+        ):
+            observed_without_type = observed_tokens - group
+            expected_without_type = expected_tokens - group
 
-    if location in nearby_locations:
-        return 10
+            if observed_without_type == expected_without_type:
+                return True
 
-    return 0
+    # "black backpack" is compatible with "black backpack with grey stripe"
+    if "backpack" in observed_tokens and "backpack" in expected_tokens:
+        return True
 
-
-# =========================================================
-# 4. TIME
-# Maximum: 20
-# =========================================================
-
-def time_match_score(profile, evidence_datetime):
-
-    if not evidence_datetime:
-        return 0
-
-    try:
-        last_seen = datetime.fromisoformat(
-            profile["lastSeen"]["dateTime"]
-        )
-
-        evidence_time = datetime.fromisoformat(
-            evidence_datetime
-        )
-
-    except (ValueError, TypeError):
-        return 0
-
-    if evidence_time < last_seen:
-        return 0
-
-    difference_minutes = (
-        evidence_time - last_seen
-    ).total_seconds() / 60
-
-    if difference_minutes <= 30:
-        return 20
-
-    if difference_minutes <= 60:
-        return 15
-
-    if difference_minutes <= 120:
-        return 10
-
-    if difference_minutes <= 240:
-        return 5
-
-    return 0
+    # Generic dark clothing is NOT treated as a positive match.
+    # It will be handled as uncertainty in score_evidence().
+    return False
 
 
-# =========================================================
-# 5. CLOTHING
-# Maximum: 15
-#
-# Top    = 5
-# Bottom = 4
-# Shoes  = 3
-# Bag    = 3
-# =========================================================
+def clothing_conflict(observed, expected, field):
+    """
+    Determines whether a clothing observation is an actual
+    contradiction rather than merely incomplete/general information.
+    """
+    if not observed or not expected:
+        return False
 
-def clothing_match_score(profile, evidence_text):
+    if compatible_clothing(observed, expected):
+        return False
 
-    text = normalize_text(evidence_text)
+    observed_normalized = normalize_text(observed)
+    expected_normalized = normalize_text(expected)
 
-    clothing = profile.get("clothing", {})
+    generic_descriptions = {
+        "dark clothing",
+        "dark clothes",
+        "casual clothing",
+        "casual clothes",
+        "clothing",
+        "unknown",
+    }
 
-    score = 0
+    if observed_normalized in generic_descriptions:
+        return False
 
-    # -----------------------------------------------------
-    # TOP
-    # -----------------------------------------------------
+    if expected_normalized in generic_descriptions:
+        return False
 
-    top = normalize_text(clothing.get("top", ""))
-
-    if top:
-        top_words = top.split()
-
-        if all(word in text.split() for word in top_words):
-            score += 5
-
-    # -----------------------------------------------------
-    # BOTTOM
-    # -----------------------------------------------------
-
-    bottom = normalize_text(clothing.get("bottom", ""))
-
-    if bottom:
-        bottom_words = bottom.split()
-
-        if all(word in text.split() for word in bottom_words):
-            score += 4
-
-    # -----------------------------------------------------
-    # SHOES
-    # -----------------------------------------------------
-
-    shoes = normalize_text(clothing.get("shoes", ""))
-
-    if shoes:
-        shoe_words = shoes.split()
-
-        if all(word in text.split() for word in shoe_words):
-            score += 3
-
-    # -----------------------------------------------------
-    # BAG
-    # -----------------------------------------------------
-
-    bag = normalize_text(clothing.get("bag", ""))
-
-    if bag:
-        bag_words = bag.split()
-
-        if all(word in text.split() for word in bag_words):
-            score += 3
-
-    return score
+    return True
 
 
-# =========================================================
-# 6. PHYSICAL CHARACTERISTICS
-# Maximum: 10
-#
-# Hair  = 3
-# Build = 3
-# Height = 2
-# Eyes = 2
-# =========================================================
+def score_evidence(profile, evidence):
+    """
+    Score one evidence record against the missing-person profile.
 
-def physical_match_score(profile, evidence_text):
+    Maximum score = 100
 
-    text = normalize_text(evidence_text)
+    Name       = 30
+    Location   = 25
+    Time       = 20
+    Clothing   = 15
+    Physical   = 10
 
-    score = 0
+    The result is an investigative priority score only.
+    It is NOT an identity confidence or probability.
+    """
 
-    physical = profile.get(
-        "physicalDescription",
-        {}
+    score_breakdown = {
+        "name": 0,
+        "location": 0,
+        "time": 0,
+        "clothing": 0,
+        "physical": 0,
+    }
+
+    matching_evidence = []
+    conflicting_evidence = []
+    uncertainty_factors = []
+
+    last_seen = datetime.fromisoformat(
+        profile["lastSeen"]["dateTime"]
     )
 
-    words = set(text.split())
-
-    # -----------------------------------------------------
-    # HAIR
-    # -----------------------------------------------------
-
-    hair = normalize_text(
-        physical.get("hairColor", "")
+    observed_time = datetime.fromisoformat(
+        evidence["dateTime"]
     )
 
-    # Require the word "hair" to be near the color
-    if hair:
-        hair_phrases = [
-            f"{hair} hair",
-            f"hair {hair}"
+    # =========================================================
+    # NAME — 30 points
+    # =========================================================
+
+    observed_name = evidence.get("observedName")
+
+    if observed_name:
+        normalized_observed = normalize_text(observed_name)
+        normalized_name = normalize_text(profile["name"])
+
+        aliases = [
+            normalize_text(alias)
+            for alias in profile.get("aliases", [])
         ]
 
-        if any(
-            phrase in text
-            for phrase in hair_phrases
+        if (
+            normalized_observed == normalized_name
+            or normalized_observed in aliases
         ):
-            score += 3
+            score_breakdown["name"] = 30
 
-    # -----------------------------------------------------
-    # BUILD
-    # -----------------------------------------------------
-
-    build = normalize_text(
-        physical.get("build", "")
-    )
-
-    if build:
-        build_phrases = [
-            f"{build} build",
-            f"build {build}"
-        ]
-
-        if any(
-            phrase in text
-            for phrase in build_phrases
-        ):
-            score += 3
-
-    # -----------------------------------------------------
-    # HEIGHT
-    # -----------------------------------------------------
-
-    height = physical.get("heightCm")
-
-    if height and str(height) in words:
-        score += 2
-
-    # -----------------------------------------------------
-    # EYES
-    # -----------------------------------------------------
-
-    eyes = normalize_text(
-        physical.get("eyeColor", "")
-    )
-
-    if eyes:
-        eye_phrases = [
-            f"{eyes} eyes",
-            f"eyes {eyes}"
-        ]
-
-        if any(
-            phrase in text
-            for phrase in eye_phrases
-        ):
-            score += 2
-
-    return score
-
-
-# =========================================================
-# 7. MATCHING EVIDENCE
-# =========================================================
-
-def find_matching_evidence(profile, evidence_text):
-
-    text = normalize_text(evidence_text)
-
-    matches = []
-
-    clothing = profile.get("clothing", {})
-    physical = profile.get(
-        "physicalDescription",
-        {}
-    )
-
-    # -----------------------------------------------------
-    # NAME
-    # -----------------------------------------------------
-
-    if normalize_text(profile["name"]) in text:
-        matches.append(
-            f"Name: {profile['name']}"
-        )
-
-    for alias in profile.get("aliases", []):
-
-        if normalize_text(alias) in text:
-            matches.append(
-                f"Alias: {alias}"
+            matching_evidence.append(
+                f"Observed name '{observed_name}' matches "
+                "the case name or alias."
             )
 
-    # -----------------------------------------------------
-    # CLOTHING
-    # -----------------------------------------------------
+        else:
+            conflicting_evidence.append(
+                f"Observed name '{observed_name}' does not match "
+                "the case name or aliases."
+            )
+
+    else:
+        uncertainty_factors.append(
+            "No observed name was provided."
+        )
+
+    # =========================================================
+    # LOCATION — 25 points
+    # =========================================================
+
+    observed_location = normalize_text(
+        evidence.get("location")
+    )
+
+    last_location = normalize_text(
+        profile["lastSeen"]["location"]
+    )
+
+    if observed_location and observed_location == last_location:
+
+        score_breakdown["location"] = 25
+
+        matching_evidence.append(
+            "Observed location matches the last known location."
+        )
+
+    elif observed_location:
+
+        riverfront_locations = [
+            "riverfront pedestrian bridge",
+            "east river road",
+            "riverfront parking",
+        ]
+
+        if any(
+            location in observed_location
+            for location in riverfront_locations
+        ):
+            score_breakdown["location"] = 20
+
+            matching_evidence.append(
+                "Observed location is within the Riverfront area."
+            )
+
+        elif "central bus stop" in observed_location:
+
+            score_breakdown["location"] = 10
+
+            matching_evidence.append(
+                "Observed location is a nearby public transit location."
+            )
+
+        else:
+
+            uncertainty_factors.append(
+                "Observed location is not a known relevant location."
+            )
+
+    else:
+
+        uncertainty_factors.append(
+            "No location was provided."
+        )
+
+    # =========================================================
+    # TIME — 20 points
+    # =========================================================
+
+    if observed_time >= last_seen:
+
+        difference_minutes = (
+            observed_time - last_seen
+        ).total_seconds() / 60
+
+        if difference_minutes <= 30:
+
+            score_breakdown["time"] = 20
+
+        elif difference_minutes <= 60:
+
+            score_breakdown["time"] = 15
+
+        elif difference_minutes <= 120:
+
+            score_breakdown["time"] = 10
+
+        elif difference_minutes <= 240:
+
+            score_breakdown["time"] = 5
+
+        else:
+
+            score_breakdown["time"] = 0
+
+        if score_breakdown["time"] > 0:
+
+            matching_evidence.append(
+                f"Observation occurred "
+                f"{int(difference_minutes)} minutes after "
+                "the last known sighting."
+            )
+
+        else:
+
+            uncertainty_factors.append(
+                "Observation occurred more than four hours "
+                "after the last known sighting."
+            )
+
+    else:
+
+        uncertainty_factors.append(
+            "Observation occurred before the recorded "
+            "last-seen time."
+        )
+
+    # =========================================================
+    # CLOTHING — 15 points
+    #
+    # Top       = 5
+    # Bottom    = 4
+    # Footwear  = 3
+    # Backpack  = 3
+    #
+    # Generic descriptions such as "dark clothing"
+    # receive 0 points and are treated as uncertainty.
+    # =========================================================
+
+    profile_clothing = profile.get(
+        "clothing",
+        {}
+    )
+
+    evidence_clothing = evidence.get(
+        "clothing",
+        {}
+    )
 
     clothing_fields = [
-        ("top", "Top"),
-        ("bottom", "Bottom"),
-        ("shoes", "Shoes"),
-        ("bag", "Bag")
+        ("top", 5, "top"),
+        ("bottom", 4, "bottom"),
+        ("footwear", 3, "footwear"),
+        ("backpack", 3, "backpack"),
     ]
 
-    for field, label in clothing_fields:
+    generic_clothing_descriptions = {
+        "dark clothing",
+        "dark clothes",
+        "casual clothing",
+        "casual clothes",
+        "clothing",
+        "unknown",
+    }
 
-        value = normalize_text(
-            clothing.get(field, "")
+    for evidence_field, points, profile_field in clothing_fields:
+
+        observed = evidence_clothing.get(
+            evidence_field
         )
 
-        if value:
-            value_words = value.split()
-
-            if all(
-                word in text.split()
-                for word in value_words
-            ):
-                matches.append(
-                    f"{label}: {clothing[field]}"
-                )
-
-    # -----------------------------------------------------
-    # HAIR
-    # -----------------------------------------------------
-
-    hair = normalize_text(
-        physical.get("hairColor", "")
-    )
-
-    if hair and f"{hair} hair" in text:
-        matches.append(
-            f"Hair: {physical['hairColor']}"
+        expected = profile_clothing.get(
+            profile_field
         )
 
-    # -----------------------------------------------------
-    # BUILD
-    # -----------------------------------------------------
+        # No observation = no score.
+        if not observed:
+            continue
 
-    build = normalize_text(
-        physical.get("build", "")
-    )
-
-    if build and f"{build} build" in text:
-        matches.append(
-            f"Build: {physical['build']}"
+        observed_normalized = normalize_text(
+            observed
         )
 
-    # -----------------------------------------------------
-    # EYES
-    # -----------------------------------------------------
+        # -----------------------------------------------------
+        # Generic clothing description
+        # -----------------------------------------------------
 
-    eyes = normalize_text(
-        physical.get("eyeColor", "")
-    )
+        if observed_normalized in generic_clothing_descriptions:
 
-    if eyes and f"{eyes} eyes" in text:
-        matches.append(
-            f"Eyes: {physical['eyeColor']}"
-        )
+            uncertainty_factors.append(
+                f"Clothing description '{observed}' "
+                f"is too general to receive matching points "
+                f"for {evidence_field}."
+            )
 
-    # -----------------------------------------------------
-    # HEIGHT
-    # -----------------------------------------------------
+            continue
 
-    height = physical.get("heightCm")
+        # -----------------------------------------------------
+        # Positive clothing match
+        # -----------------------------------------------------
 
-    if height and str(height) in text.split():
-        matches.append(
-            f"Height: {height} cm"
-        )
+        if compatible_clothing(
+            observed,
+            expected
+        ):
 
-    return matches
+            score_breakdown["clothing"] += points
 
+            matching_evidence.append(
+                f"Clothing match: "
+                f"{evidence_field} = {observed}."
+            )
 
-# =========================================================
-# 8. CONFLICT DETECTION
-# =========================================================
+        # -----------------------------------------------------
+        # Actual clothing conflict
+        # -----------------------------------------------------
 
-def find_conflicts(profile, evidence_text):
+        elif clothing_conflict(
+            observed,
+            expected,
+            evidence_field
+        ):
 
-    text = normalize_text(evidence_text)
+            conflicting_evidence.append(
+                f"Clothing mismatch: observed "
+                f"{evidence_field} = {observed}, "
+                f"expected {profile_field} = {expected}."
+            )
 
-    conflicts = []
+        # -----------------------------------------------------
+        # Insufficient information
+        # -----------------------------------------------------
 
-    clothing = profile.get("clothing", {})
-    physical = profile.get(
+        else:
+
+            uncertainty_factors.append(
+                f"Clothing description is insufficiently "
+                f"specific for {evidence_field}."
+            )
+
+    # =========================================================
+    # PHYSICAL — 10 points
+    #
+    # Hair  = 3
+    # Build = 3
+    # Height = 2
+    # Eyes = 2
+    #
+    # Identifying mark is evidence only and is not scored.
+    # =========================================================
+
+    profile_physical = profile.get(
         "physicalDescription",
         {}
     )
 
-    expected_top = normalize_text(
-        clothing.get("top", "")
+    evidence_physical = evidence.get(
+        "physical",
+        {}
     )
 
-    expected_hair = normalize_text(
-        physical.get("hairColor", "")
+    # ---------------------------------------------------------
+    # Hair — 3
+    # ---------------------------------------------------------
+
+    observed_hair = evidence_physical.get(
+        "hair"
     )
 
-    expected_build = normalize_text(
-        physical.get("build", "")
+    expected_hair = profile_physical.get(
+        "hairColor"
     )
 
-    # -----------------------------------------------------
-    # TOP CONFLICT
-    # -----------------------------------------------------
+    if observed_hair:
 
-    if (
-        "red jacket" in text
-        and expected_top != "red jacket"
-    ):
-        conflicts.append(
-            "Evidence mentions a red jacket, "
-            "while the known clothing is a blue hoodie."
+        if same_text(
+            observed_hair,
+            expected_hair
+        ):
+
+            score_breakdown["physical"] += 3
+
+            matching_evidence.append(
+                f"Physical match: hair = {observed_hair}."
+            )
+
+        else:
+
+            conflicting_evidence.append(
+                f"Physical mismatch: observed hair = "
+                f"{observed_hair}, expected hair = "
+                f"{expected_hair}."
+            )
+
+    else:
+
+        uncertainty_factors.append(
+            "No hair color observation was provided."
         )
 
-    # -----------------------------------------------------
-    # HAIR CONFLICT
-    # -----------------------------------------------------
+    # ---------------------------------------------------------
+    # Build — 3
+    # ---------------------------------------------------------
 
-    if (
-        "blonde hair" in text
-        and expected_hair != "blonde"
-    ):
-        conflicts.append(
-            "Evidence mentions blonde hair, "
-            "while the known hair color is black."
+    observed_build = evidence_physical.get(
+        "build"
+    )
+
+    expected_build = profile_physical.get(
+        "build"
+    )
+
+    if observed_build:
+
+        if same_text(
+            observed_build,
+            expected_build
+        ):
+
+            score_breakdown["physical"] += 3
+
+            matching_evidence.append(
+                f"Physical match: build = {observed_build}."
+            )
+
+        else:
+
+            conflicting_evidence.append(
+                f"Physical mismatch: observed build = "
+                f"{observed_build}, expected build = "
+                f"{expected_build}."
+            )
+
+    else:
+
+        uncertainty_factors.append(
+            "No build observation was provided."
         )
 
-    # -----------------------------------------------------
-    # BUILD CONFLICT
-    # -----------------------------------------------------
+    # ---------------------------------------------------------
+    # Height — 2
+    # ---------------------------------------------------------
 
-    if (
-        "slim build" in text
-        and expected_build != "slim"
-    ):
-        conflicts.append(
-            "Evidence mentions a slim build, "
-            "while the known build is medium."
+    observed_height = evidence_physical.get(
+        "heightCm"
+    )
+
+    expected_height = profile_physical.get(
+        "heightCm"
+    )
+
+    if observed_height is not None:
+
+        try:
+
+            observed_height = float(
+                observed_height
+            )
+
+            expected_height = float(
+                expected_height
+            )
+
+            height_difference = abs(
+                observed_height - expected_height
+            )
+
+            if height_difference <= 5:
+
+                score_breakdown["physical"] += 2
+
+                matching_evidence.append(
+                    f"Physical match: observed height "
+                    f"{int(observed_height)} cm is within "
+                    "5 cm of the profile height."
+                )
+
+            else:
+
+                conflicting_evidence.append(
+                    f"Physical mismatch: observed height "
+                    f"{int(observed_height)} cm differs from "
+                    f"profile height {int(expected_height)} cm."
+                )
+
+        except (
+            TypeError,
+            ValueError
+        ):
+
+            uncertainty_factors.append(
+                "Height observation could not be evaluated."
+            )
+
+    else:
+
+        uncertainty_factors.append(
+            "No height observation was provided."
         )
 
-    if (
-        "heavy build" in text
-        and expected_build != "heavy"
-    ):
-        conflicts.append(
-            "Evidence mentions a heavy build, "
-            "while the known build is medium."
+    # ---------------------------------------------------------
+    # Eyes — 2
+    # ---------------------------------------------------------
+
+    observed_eyes = evidence_physical.get(
+        "eyes"
+    )
+
+    expected_eyes = profile_physical.get(
+        "eyeColor"
+    )
+
+    if observed_eyes:
+
+        if same_text(
+            observed_eyes,
+            expected_eyes
+        ):
+
+            score_breakdown["physical"] += 2
+
+            matching_evidence.append(
+                f"Physical match: eyes = {observed_eyes}."
+            )
+
+        else:
+
+            conflicting_evidence.append(
+                f"Physical mismatch: observed eyes = "
+                f"{observed_eyes}, expected eyes = "
+                f"{expected_eyes}."
+            )
+
+    else:
+
+        uncertainty_factors.append(
+            "No eye color observation was provided."
         )
 
-    return conflicts
+    # =========================================================
+    # IDENTIFYING MARK
+    #
+    # The identifying mark is not scored.
+    # It can still contribute to matching/conflicting evidence.
+    # =========================================================
 
-
-# =========================================================
-# 9. COMPLETE SCORE
-# Maximum = 100
-# =========================================================
-
-def calculate_score(
-    profile,
-    evidence_text,
-    evidence_location=None,
-    evidence_datetime=None
-):
-
-    name_score = name_match_score(
-        profile,
-        evidence_text
+    observed_mark = evidence_physical.get(
+        "identifyingMark"
     )
 
-    location_score = location_match_score(
-        profile,
-        evidence_location
+    expected_marks = profile_physical.get(
+        "identifyingMarks",
+        []
     )
 
-    time_score = time_match_score(
-        profile,
-        evidence_datetime
-    )
+    if observed_mark:
 
-    clothing_score = clothing_match_score(
-        profile,
-        evidence_text
-    )
+        normalized_observed_mark = normalize_text(
+            observed_mark
+        )
 
-    physical_score = physical_match_score(
-        profile,
-        evidence_text
-    )
+        mark_match = False
 
-    total_score = (
-        name_score
-        + location_score
-        + time_score
-        + clothing_score
-        + physical_score
+        for expected_mark in expected_marks:
+
+            if same_text(
+                observed_mark,
+                expected_mark
+            ):
+
+                mark_match = True
+
+                matching_evidence.append(
+                    f"Identifying mark observation matches "
+                    f"profile information: {observed_mark}."
+                )
+
+                break
+
+        if not mark_match:
+
+            conflicting_evidence.append(
+                f"Observed identifying mark '{observed_mark}' "
+                "does not match the recorded identifying marks."
+            )
+
+    else:
+
+        uncertainty_factors.append(
+            "No identifying mark was observed."
+        )
+
+    # =========================================================
+    # FINAL SCORE
+    # =========================================================
+
+    total_score = sum(
+        score_breakdown.values()
     )
 
     return {
-        "nameScore": name_score,
-        "locationScore": location_score,
-        "timeScore": time_score,
-        "clothingScore": clothing_score,
-        "physicalScore": physical_score,
-        "totalScore": total_score,
-        "matchingEvidence": find_matching_evidence(
-            profile,
-            evidence_text
-        ),
-        "conflictingEvidence": find_conflicts(
-            profile,
-            evidence_text
-        )
+        "score": total_score,
+        "scoreBreakdown": {
+            "name": score_breakdown["name"],
+            "location": score_breakdown["location"],
+            "time": score_breakdown["time"],
+            "clothing": score_breakdown["clothing"],
+            "physical": score_breakdown["physical"],
+        },
+        "matchingEvidence": matching_evidence,
+        "conflictingEvidence": conflicting_evidence,
+        "uncertaintyFactors": uncertainty_factors,
     }
 
-
-# =========================================================
-# 10. TESTS
-# =========================================================
 
 if __name__ == "__main__":
-
-    profile = {
-        "name": "Aarav Shah",
-        "aliases": ["Aarav"],
-
-        "physicalDescription": {
-            "heightCm": 178,
-            "build": "medium",
-            "hairColor": "black",
-            "eyeColor": "brown",
-            "identifyingMarks": [
-                "small scar above right eyebrow"
-            ]
-        },
-
-        "clothing": {
-            "top": "blue hoodie",
-            "bottom": "black jeans",
-            "shoes": "white sneakers",
-            "bag": "black backpack with grey stripe"
-        },
-
-        "lastSeen": {
-            "dateTime": "2026-09-23T18:10:00",
-            "location": "Riverfront Park, Ahmedabad"
-        }
-    }
-
-
-    # -----------------------------------------------------
-    # BASIC TESTS
-    # -----------------------------------------------------
-
-    print("=" * 60)
-    print("NORMALIZATION TEST")
-    print("=" * 60)
-
     print(
-        "Blue Hoodie ->",
-        normalize_text("Blue Hoodie")
+        "scoring.py loaded successfully."
     )
-
-    print(
-        "BLACK   JEANS ->",
-        normalize_text("BLACK   JEANS")
-    )
-
-
-    # -----------------------------------------------------
-    # COMPLETE EVIDENCE TESTS
-    # -----------------------------------------------------
-
-    print("\n" + "=" * 60)
-    print("COMPLETE EVIDENCE TESTS")
-    print("=" * 60)
-
-    evidence_examples = [
-
-        {
-            "id": "T001",
-            "text": (
-                "A young man wearing a blue hoodie "
-                "and black jeans was seen walking "
-                "toward the pedestrian bridge "
-                "near Riverfront Park."
-            ),
-            "location": "Riverfront Pedestrian Bridge",
-            "datetime": "2026-09-23T18:32:00"
-        },
-
-        {
-            "id": "T003",
-            "text": (
-                "A person carrying a black backpack "
-                "with a grey stripe passed the shop "
-                "near the pedestrian bridge."
-            ),
-            "location": "Riverfront Pedestrian Bridge",
-            "datetime": "2026-09-23T18:51:00"
-        },
-
-        {
-            "id": "T004",
-            "text": (
-                "A person wearing a red jacket "
-                "was seen near the railway station."
-            ),
-            "location": "Railway Station Gate 2",
-            "datetime": "2026-09-23T20:20:00"
-        },
-
-        {
-            "id": "T005",
-            "text": (
-                "A person with black hair "
-                "and a medium build was seen "
-                "near a tea stall."
-            ),
-            "location": "Tea Stall",
-            "datetime": "2026-09-24T09:10:00"
-        },
-
-        {
-            "id": "T007",
-            "text": (
-                "Someone named Aarav may have "
-                "been seen near a shopping complex."
-            ),
-            "location": "Shopping Complex",
-            "datetime": "2026-09-23T21:30:00"
-        }
-    ]
-
-
-    for evidence in evidence_examples:
-
-        result = calculate_score(
-            profile=profile,
-            evidence_text=evidence["text"],
-            evidence_location=evidence["location"],
-            evidence_datetime=evidence["datetime"]
-        )
-
-        print(f"\nRecord: {evidence['id']}")
-
-        print(
-            f"Name:     {result['nameScore']}/30"
-        )
-
-        print(
-            f"Location: {result['locationScore']}/25"
-        )
-
-        print(
-            f"Time:     {result['timeScore']}/20"
-        )
-
-        print(
-            f"Clothing: {result['clothingScore']}/15"
-        )
-
-        print(
-            f"Physical: {result['physicalScore']}/10"
-        )
-
-        print(
-            f"TOTAL:    {result['totalScore']}/100"
-        )
-
-        print(
-            "Matching:",
-            result["matchingEvidence"]
-        )
-
-        print(
-            "Conflicts:",
-            result["conflictingEvidence"]
-        )

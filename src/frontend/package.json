@@ -1,0 +1,29 @@
+{
+  "name": "missing-person-investigation-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "node --test",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@carbon/react": "^1.117.0",
+    "@ibm/plex": "6.4.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.9.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "sass": "^1.105.0",
+    "tailwindcss": "^4.1.0",
+    "vite": "^7.1.0"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  }
+}

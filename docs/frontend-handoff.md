@@ -66,3 +66,49 @@ npm start
 ```
 
 The frontend can use the backend directly at `http://127.0.0.1:8000`; Bob connects to the MCP server through `.bob/mcp.json`.
+
+## AI generation endpoint
+
+The frontend may call the backend AI endpoint for Bob-style explanation and
+document generation:
+
+```http
+POST /ai/generate
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "caseNumber": "MP-2026-0042",
+  "mode": "analyse-case"
+}
+```
+
+Supported modes are `analyse-case`, `public-appeal`, and `case-file`.
+
+Response:
+
+```json
+{
+  "caseNumber": "MP-2026-0042",
+  "mode": "analyse-case",
+  "generatedText": "...",
+  "structuredOutput": {},
+  "modelId": "openai/gpt-oss-20b"
+}
+```
+
+The endpoint uses the backend's deterministic correlation output as model
+context. The model must not be used to create or alter scores. Configure the
+provider through environment variables only:
+
+```text
+NVIDIA_API_KEY=your_nvidia_api_key_here
+NVIDIA_MODEL=openai/gpt-oss-20b
+BACKEND_BASE_URL=http://127.0.0.1:8000
+```
+
+Do not expose `NVIDIA_API_KEY` to the browser or commit it. The frontend
+should display provider errors using `detail.code` and `detail.message`.

@@ -32,6 +32,19 @@ Retrieves the family-provided missing-person profile.
 - **Input:** `caseNumber` (string) - Fictional missing-person case number.
 - **Returns:** Object containing personal details (name, age, physical description, last seen info, etc.).
 
+
+## AI generation API
+
+The FastAPI backend also exposes `POST /ai/generate` for model-generated
+explanations and documents. It supports these modes:
+
+- `analyse-case`
+- `public-appeal`
+- `case-file`
+
+This route uses the NVIDIA OpenAI-compatible API and never owns deterministic
+scoring. The backend correlation result is passed to the model as authoritative
+context. Credentials are read only from `NVIDIA_API_KEY` and `NVIDIA_MODEL`.
 ### `get_investigator_tips`
 Retrieves all mock investigator tips without modifying or scoring them.
 - **Input:** `caseNumber` (string) - Fictional missing-person case number.

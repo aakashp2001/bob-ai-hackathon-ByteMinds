@@ -1,586 +1,459 @@
 import json
 from datetime import datetime
+from pathlib import Path
 
-from src.backend.services.scoring import calculate_score
+from src.backend.services.scoring import score_evidence
 
 
-# =========================================================
-# DATA LOADING
-# =========================================================
+BASE_DIR = Path(__file__).resolve().parents[2]
+DATA_DIR = BASE_DIR / "data"
 
-def load_json(path):
-    """
-    Loads a JSON file.
-    """
 
-    with open(path, "r", encoding="utf-8") as file:
+def load_json(filename):
+    with open(DATA_DIR / filename, "r", encoding="utf-8") as file:
         return json.load(file)
 
 
-def load_case_data():
-    """
-    Loads the complete fictional case.
-    """
-
-    profile = load_json(
-        "src/data/person_profile.json"
-    )
-
-    tips = load_json(
-        "src/data/tips.json"
-    )
-
-    cctv = load_json(
-        "src/data/cctv.json"
-    )
+def load_data():
+    profile = load_json("person_profile.json")
+    tips = load_json("tips.json")
+    cctv = load_json("cctv.json")
 
     return profile, tips, cctv
 
 
-# =========================================================
-# TIME HELPERS
-# =========================================================
-
 def parse_datetime(value):
+    return datetime.fromisoformat(value)
+
+
+def get_record_id(record):
+    if "tipId" in record:
+        return record["tipId"]
+
+    if "sightingId" in record:
+        return record["sightingId"]
+
+    if "cctvId" in record:
+        return record["cctvId"]
+
+    return "UNKNOWN"
+
+
+def get_record_type(record):
+    if "tipId" in record:
+        return "tip"
+
+    if "sightingId" in record:
+        return "cctv"
+
+    if "cctvId" in record:
+        return "cctv"
+
+    return "unknown"
+
+
+def get_record_location(record):
+    return record.get(
+        "location",
+        record.get("cameraLocation", "")
+    )
+
+
+def get_zone(location):
     """
-    Converts ISO datetime text into a datetime object.
+    Normalize locations into broad geographic zones.
     """
-
-    try:
-        return datetime.fromisoformat(value)
-
-    except (ValueError, TypeError):
-        return None
-
-
-def time_difference_minutes(time_a, time_b):
-    """
-    Returns the absolute difference between two timestamps.
-    """
-
-    dt_a = parse_datetime(time_a)
-    dt_b = parse_datetime(time_b)
-
-    if not dt_a or not dt_b:
-        return None
-
-    return abs(
-        (dt_a - dt_b).total_seconds()
-    ) / 60
-
-
-# =========================================================
-# LOCATION NORMALIZATION
-# =========================================================
-
-def normalize_location(location):
-    """
-    Converts different descriptions of nearby places
-    into broader location zones.
-
-    This is intentionally deterministic.
-    """
-
-    if not location:
-        return ""
 
     location = location.lower()
 
-    if (
-        "riverfront" in location
-        or "pedestrian bridge" in location
-        or "east river" in location
-    ):
+    if "riverfront pedestrian bridge" in location:
         return "riverfront"
 
-    if (
-        "bus stop" in location
-    ):
+    if "east river road" in location:
+        return "riverfront"
+
+    if "riverfront parking" in location:
+        return "riverfront"
+
+    if "central bus stop" in location:
         return "bus_stop"
 
-    if (
-        "railway" in location
-        or "station" in location
-    ):
+    if "railway station" in location:
         return "railway_station"
 
-    if (
-        "shopping complex" in location
-    ):
+    if "shopping complex" in location:
         return "shopping_complex"
 
-    if (
-        "residential" in location
-        or "tea stall" in location
-    ):
+    if "residential area" in location:
         return "residential"
 
-    return location
+    if "tea stall" in location:
+        return "tea_stall"
+
+    return None
 
 
-# =========================================================
-# LOCATION RELATIONSHIP
-# =========================================================
-
-def locations_are_related(location_a, location_b):
+def records_are_related(record_a, record_b):
     """
-    Determines whether two locations belong to the
-    same broad geographic zone.
+    Two records are considered related when:
+    - they occur within 15 minutes
+    - they belong to the same geographic zone
     """
 
-    zone_a = normalize_location(location_a)
-    zone_b = normalize_location(location_b)
+    time_a = parse_datetime(record_a["dateTime"])
+    time_b = parse_datetime(record_b["dateTime"])
 
-    if not zone_a or not zone_b:
+    difference_minutes = abs(
+        (time_a - time_b).total_seconds()
+    ) / 60
+
+    if difference_minutes > 15:
         return False
 
-    return zone_a == zone_b
-
-
-# =========================================================
-# EVIDENCE CONVERSION
-# =========================================================
-
-def extract_tip_location(tip):
-    """
-    Tips do not currently contain a dedicated location field.
-
-    We infer a supported location from the description.
-    """
-
-    description = tip["description"].lower()
-
-    known_locations = [
-        "riverfront park",
-        "pedestrian bridge",
-        "city bus stop",
-        "railway station",
-        "tea stall",
-        "shopping complex",
-        "residential area"
-    ]
-
-    for location in known_locations:
-
-        if location in description:
-
-            # Convert description phrases into
-            # standardized locations.
-
-            if location == "pedestrian bridge":
-                return "Riverfront Pedestrian Bridge"
-
-            if location == "city bus stop":
-                return "Central Bus Stop"
-
-            if location == "railway station":
-                return "Railway Station"
-
-            return location.title()
-
-    return ""
-
-
-def tip_to_evidence(tip):
-    """
-    Converts an investigator tip into common evidence format.
-    """
-
-    return {
-        "id": tip["tipId"],
-        "type": "tip",
-        "datetime": tip["dateTime"],
-        "location": extract_tip_location(tip),
-        "description": tip["description"]
-    }
-
-
-def cctv_to_evidence(sighting):
-    """
-    Converts a CCTV sighting into common evidence format.
-    """
-
-    return {
-        "id": sighting["sightingId"],
-        "type": "cctv",
-        "datetime": sighting["dateTime"],
-        "location": sighting["cameraLocation"],
-        "description": sighting["description"]
-    }
-
-
-# =========================================================
-# SCORE EVIDENCE
-# =========================================================
-
-def score_evidence(profile, evidence):
-    """
-    Runs the deterministic scoring engine against one
-    evidence record.
-    """
-
-    result = calculate_score(
-        profile=profile,
-        evidence_text=evidence["description"],
-        evidence_location=evidence["location"],
-        evidence_datetime=evidence["datetime"]
+    location_a = get_zone(
+        get_record_location(record_a)
     )
 
-    return {
-        "recordId": evidence["id"],
-        "recordType": evidence["type"],
-        "dateTime": evidence["datetime"],
-        "location": evidence["location"],
-        "description": evidence["description"],
-        "score": result["totalScore"],
-        "matchingEvidence": result["matchingEvidence"],
-        "conflictingEvidence": result["conflictingEvidence"]
-    }
-
-
-# =========================================================
-# EVIDENCE RELATIONSHIP
-# =========================================================
-
-def evidence_is_related(evidence_a, evidence_b):
-    """
-    Determines whether two records can belong to the same
-    investigative movement chain.
-
-    Rules:
-
-    1. Maximum time gap = 15 minutes.
-    2. Locations must belong to the same broad zone.
-
-    OR
-
-    3. If locations are unknown, records can still connect
-       when their descriptions share strong identifying
-       evidence.
-    """
-
-    time_difference = time_difference_minutes(
-        evidence_a["datetime"],
-        evidence_b["datetime"]
+    location_b = get_zone(
+        get_record_location(record_b)
     )
 
-    if time_difference is None:
+    if location_a is None or location_b is None:
         return False
 
-    if time_difference > 15:
-        return False
-
-    # Strong location relationship
-    if locations_are_related(
-        evidence_a["location"],
-        evidence_b["location"]
-    ):
-        return True
-
-    # If both records have no useful location,
-    # compare textual evidence.
-    if (
-        not evidence_a["location"]
-        and not evidence_b["location"]
-    ):
-
-        text_a = evidence_a["description"].lower()
-        text_b = evidence_b["description"].lower()
-
-        shared_indicators = [
-            "blue hoodie",
-            "black jeans",
-            "black backpack",
-            "grey stripe",
-            "black hair",
-            "medium build",
-            "white shoes",
-            "aarav"
-        ]
-
-        shared_count = 0
-
-        for indicator in shared_indicators:
-
-            if (
-                indicator in text_a
-                and indicator in text_b
-            ):
-                shared_count += 1
-
-        if shared_count >= 1:
-            return True
-
-    return False
+    return location_a == location_b
 
 
-# =========================================================
-# MOVEMENT CHAIN GROUPING
-# =========================================================
-
-def group_evidence(evidence_list):
+def build_groups(records):
     """
-    Builds connected evidence clusters.
+    Build connected groups of related records.
 
-    If A is related to B and B is related to C,
-    A, B and C can belong to the same movement chain.
-
-    This is a simple graph traversal rather than requiring
-    every record to directly match every other record.
+    Each group represents a potential investigative event.
     """
-
-    # Build relationship graph
-
-    graph = {
-        evidence["id"]: []
-        for evidence in evidence_list
-    }
-
-    for i in range(len(evidence_list)):
-
-        for j in range(i + 1, len(evidence_list)):
-
-            first = evidence_list[i]
-            second = evidence_list[j]
-
-            if evidence_is_related(
-                first,
-                second
-            ):
-
-                graph[first["id"]].append(
-                    second["id"]
-                )
-
-                graph[second["id"]].append(
-                    first["id"]
-                )
-
-    evidence_by_id = {
-        evidence["id"]: evidence
-        for evidence in evidence_list
-    }
 
     groups = []
     visited = set()
 
-    # Find connected components
+    for record in records:
 
-    for evidence in evidence_list:
+        record_id = get_record_id(record)
 
-        evidence_id = evidence["id"]
-
-        if evidence_id in visited:
+        if record_id in visited:
             continue
 
         group = []
-        stack = [evidence_id]
+        queue = [record]
 
-        visited.add(evidence_id)
+        while queue:
 
-        while stack:
+            current = queue.pop()
+            current_id = get_record_id(current)
 
-            current_id = stack.pop()
+            if current_id in visited:
+                continue
 
-            group.append(
-                evidence_by_id[current_id]
-            )
+            visited.add(current_id)
+            group.append(current)
 
-            for neighbour in graph[current_id]:
+            for candidate in records:
 
-                if neighbour not in visited:
+                candidate_id = get_record_id(candidate)
 
-                    visited.add(neighbour)
-                    stack.append(neighbour)
+                if candidate_id in visited:
+                    continue
+
+                if records_are_related(
+                    current,
+                    candidate
+                ):
+                    queue.append(candidate)
 
         groups.append(group)
 
     return groups
 
 
-# =========================================================
-# CORROBORATION BONUS
-# =========================================================
-
-def calculate_corroboration_bonus(scored_records):
+def get_title(group):
     """
-    Adds a small bonus when multiple independent records
-    support the same lead.
-
-    We deliberately cap the bonus so that a large number
-    of weak records cannot create an artificially huge score.
+    Generate a deterministic lead title.
     """
 
-    record_count = len(scored_records)
-
-    if record_count <= 1:
-        return 0
-
-    # Maximum bonus = 20
-    bonus = min(
-        20,
-        (record_count - 1) * 5
-    )
-
-    return bonus
-
-
-# =========================================================
-# CREATE INVESTIGATIVE LEAD
-# =========================================================
-
-def create_lead(group, profile):
-
-    scored_records = []
-
-    for evidence in group:
-
-        scored = score_evidence(
-            profile,
-            evidence
+    zones = [
+        get_zone(
+            get_record_location(record)
         )
+        for record in group
+    ]
 
-        scored_records.append(
-            scored
-        )
+    if "riverfront" in zones:
+        return "Riverfront Potential Sighting"
 
-    # Highest individual evidence score is the
-    # foundation of the lead score.
+    if "bus_stop" in zones:
+        return "Central Bus Stop Potential Sighting"
 
-    highest_score = max(
-        record["score"]
-        for record in scored_records
-    )
+    if "railway_station" in zones:
+        return "Railway Station Potential Sighting"
 
-    corroboration_bonus = calculate_corroboration_bonus(
-        scored_records
-    )
+    if "shopping_complex" in zones:
+        return "Shopping Complex Potential Sighting"
 
-    lead_score = min(
-        100,
-        highest_score + corroboration_bonus
-    )
+    if "tea_stall" in zones:
+        return "Tea Stall Potential Sighting"
 
-    # Collect matching/conflicting evidence
+    if "residential" in zones:
+        return "Residential Area Potential Sighting"
 
-    matching_evidence = []
-    conflicting_evidence = []
+    return "Potential Sighting"
 
-    for record in scored_records:
 
-        matching_evidence.extend(
-            record["matchingEvidence"]
-        )
+def get_priority(score):
+    """
+    Deterministic investigative priority.
 
-        conflicting_evidence.extend(
-            record["conflictingEvidence"]
-        )
+    This is NOT identity confidence.
+    """
 
-    # Remove duplicates
+    if score >= 70:
+        return "high"
 
-    matching_evidence = list(
-        dict.fromkeys(
-            matching_evidence
-        )
-    )
+    if score >= 40:
+        return "medium"
 
-    conflicting_evidence = list(
-        dict.fromkeys(
-            conflicting_evidence
-        )
-    )
+    return "low"
 
-    # Determine recommended action
+
+def get_uncertainty(
+    group,
+    score,
+    conflicting_evidence
+):
+    """
+    Deterministic uncertainty classification.
+
+    High:
+        Explicit conflicting evidence.
+
+    Low:
+        High score + multiple corroborating records
+        + no conflicts.
+
+    Medium:
+        Everything else.
+    """
+
+    if conflicting_evidence:
+        return "high"
+
+    if score >= 70 and len(group) >= 2:
+        return "low"
+
+    return "medium"
+
+
+def get_next_action(
+    group,
+    conflicting_evidence
+):
+    """
+    Generate one deterministic next action.
+    """
+
+    record_ids = [
+        get_record_id(record)
+        for record in group
+    ]
+
+    tip_ids = [
+        get_record_id(record)
+        for record in group
+        if get_record_type(record) == "tip"
+    ]
+
+    cctv_ids = [
+        get_record_id(record)
+        for record in group
+        if get_record_type(record) == "cctv"
+    ]
 
     if conflicting_evidence:
 
-        action = (
-            "Review the conflicting observation, "
-            "verify the source record, and seek "
-            "independent corroboration before treating "
-            "this lead as consistent with the known profile."
+        return (
+            "Verify the conflicting evidence in source records "
+            f"{', '.join(record_ids)} against the original source "
+            "or independent evidence."
         )
 
-    elif lead_score >= 60:
+    if tip_ids and cctv_ids:
 
-        action = (
-            "Prioritize verification of this movement chain "
-            "using available CCTV footage, witness follow-up, "
-            "and timeline confirmation."
+        return (
+            f"Verify tip record {tip_ids[0]} against CCTV record "
+            f"{cctv_ids[0]} and review the full available footage."
         )
 
-    elif lead_score >= 30:
+    if len(cctv_ids) >= 2:
 
-        action = (
-            "Review the linked evidence and verify the "
-            "location and timeline with additional sources."
+        return (
+            "Review the full available CCTV footage to establish "
+            "the movement sequence between cameras."
         )
 
-    else:
+    if cctv_ids:
 
-        action = (
-            "Keep as a low-priority lead and seek "
-            "independent corroboration before escalation."
+        return (
+            f"Review the full available footage for CCTV record "
+            f"{cctv_ids[0]}."
         )
 
-    # Sort records chronologically
+    if tip_ids:
 
-    scored_records.sort(
-        key=lambda record: record["dateTime"]
+        return (
+            f"Verify tip record {tip_ids[0]} with an independent "
+            "source or nearby CCTV."
+        )
+
+    return "Verify the source information independently."
+
+
+def build_lead(
+    group,
+    profile,
+    lead_id
+):
+    """
+    Build one structured investigative lead.
+    """
+
+    scored_records = []
+
+    for record in group:
+
+        result = score_evidence(
+            profile,
+            record
+        )
+
+        scored_records.append(result)
+
+    # The highest individual score represents
+    # the deterministic score of the lead.
+    best_result = max(
+        scored_records,
+        key=lambda result: result["score"]
     )
 
+    score = best_result["score"]
+
+    score_breakdown = best_result[
+        "scoreBreakdown"
+    ]
+
+    matching_evidence = []
+    conflicting_evidence = []
+    uncertainty_factors = []
+
+    # Combine evidence from every record in the group.
+    for result in scored_records:
+
+        for evidence in result.get(
+            "matchingEvidence",
+            []
+        ):
+
+            if evidence not in matching_evidence:
+                matching_evidence.append(evidence)
+
+        for evidence in result.get(
+            "conflictingEvidence",
+            []
+        ):
+
+            if evidence not in conflicting_evidence:
+                conflicting_evidence.append(evidence)
+
+        for factor in result.get(
+            "uncertaintyFactors",
+            []
+        ):
+
+            if factor not in uncertainty_factors:
+                uncertainty_factors.append(factor)
+
+    corroborating_record_count = len(group)
+
+    uncertainty = get_uncertainty(
+        group,
+        score,
+        conflicting_evidence
+    )
+
+    priority = get_priority(score)
+
     return {
-        "score": lead_score,
-        "baseScore": highest_score,
-        "corroborationBonus": corroboration_bonus,
+        "leadId": lead_id,
+        "rank": 0,
+        "title": get_title(group),
+
         "sourceRecordIds": [
-            record["recordId"]
-            for record in scored_records
+            get_record_id(record)
+            for record in group
         ],
+
+        "score": score,
+
+        "scoreBreakdown": {
+            "name": score_breakdown.get(
+                "name",
+                0
+            ),
+            "location": score_breakdown.get(
+                "location",
+                0
+            ),
+            "time": score_breakdown.get(
+                "time",
+                0
+            ),
+            "clothing": score_breakdown.get(
+                "clothing",
+                0
+            ),
+            "physical": score_breakdown.get(
+                "physical",
+                0
+            )
+        },
+
+        "priority": priority,
+
         "matchingEvidence": matching_evidence,
+
         "conflictingEvidence": conflicting_evidence,
-        "recommendedNextAction": action,
-        "records": scored_records
+
+        "uncertainty": uncertainty,
+
+        "uncertaintyFactors": uncertainty_factors,
+
+        "recommendedNextAction": get_next_action(
+            group,
+            conflicting_evidence
+        ),
+
+        "corroboratingRecordCount": corroborating_record_count
     }
 
 
-# =========================================================
-# COMPLETE CORRELATION
-# =========================================================
-
 def run_correlation():
+    """
+    Main deterministic correlation pipeline.
+    """
 
-    profile, tips, cctv = load_case_data()
+    profile, tips, cctv = load_data()
 
-    evidence = []
+    # Combine all source records.
+    records = tips + cctv
 
-    # Convert investigator tips
-
-    for tip in tips:
-
-        evidence.append(
-            tip_to_evidence(tip)
-        )
-
-    # Convert CCTV sightings
-
-    for sighting in cctv:
-
-        evidence.append(
-            cctv_to_evidence(sighting)
-        )
-
-    # Sort chronologically
-
-    evidence.sort(
-        key=lambda item: item["datetime"]
-    )
-
-    # Build movement chains
-
-    groups = group_evidence(
-        evidence
-    )
+    # Group related records.
+    groups = build_groups(records)
 
     leads = []
 
@@ -589,119 +462,75 @@ def run_correlation():
         start=1
     ):
 
-        lead = create_lead(
+        lead = build_lead(
             group,
-            profile
+            profile,
+            f"L{index:03d}"
         )
 
-        lead["leadId"] = f"L{index:03d}"
+        leads.append(lead)
 
-        leads.append(
-            lead
-        )
-
-    # Highest priority first
-
+    # Deterministic ranking:
+    #
+    # 1. Higher score
+    # 2. More corroborating records
+    # 3. Stable source ID as tie-breaker
     leads.sort(
-        key=lambda lead: lead["score"],
-        reverse=True
+        key=lambda lead: (
+            -lead["score"],
+            -lead["corroboratingRecordCount"],
+            lead["sourceRecordIds"][0]
+        )
     )
 
-    # Re-number after sorting
-
-    for index, lead in enumerate(
+    # Assign final ranks after sorting.
+    for rank, lead in enumerate(
         leads,
         start=1
     ):
 
-        lead["leadId"] = f"L{index:03d}"
+        lead["rank"] = rank
 
     return {
         "caseNumber": profile["caseNumber"],
-        "totalEvidenceRecords": len(evidence),
-        "totalLeads": len(leads),
+
+        "status": "completed",
+
+        "scoringModel": {
+            "maxScore": 100,
+
+            "interpretation": (
+                "Investigative priority score only; "
+                "not identity confidence or probability."
+            ),
+
+            "criteria": {
+                "name": 30,
+                "location": 25,
+                "time": 20,
+                "clothing": 15,
+                "physical": 10
+            },
+
+            "priorityThresholds": {
+                "high": "70-100",
+                "medium": "40-69",
+                "low": "0-39"
+            }
+        },
+
         "leads": leads
     }
 
-
-# =========================================================
-# TEST
-# =========================================================
 
 if __name__ == "__main__":
 
     result = run_correlation()
 
-    print("=" * 70)
-    print("CORRELATION ENGINE")
-    print("=" * 70)
-
     print(
-        f"Case: {result['caseNumber']}"
+        json.dumps(
+            result,
+            indent=2,
+            ensure_ascii=False
+        )
     )
-
-    print(
-        f"Evidence records: "
-        f"{result['totalEvidenceRecords']}"
-    )
-
-    print(
-        f"Investigative leads: "
-        f"{result['totalLeads']}"
-    )
-
-    for lead in result["leads"]:
-
-        print("\n" + "-" * 70)
-
-        print(
-            f"Lead: {lead['leadId']}"
-        )
-
-        print(
-            f"Source records: "
-            f"{lead['sourceRecordIds']}"
-        )
-
-        print(
-            f"Base score: "
-            f"{lead['baseScore']}/100"
-        )
-
-        print(
-            f"Corroboration bonus: "
-            f"+{lead['corroborationBonus']}"
-        )
-
-        print(
-            f"Lead score: "
-            f"{lead['score']}/100"
-        )
-
-        print(
-            "Matching evidence:",
-            lead["matchingEvidence"]
-        )
-
-        print(
-            "Conflicting evidence:",
-            lead["conflictingEvidence"]
-        )
-
-        print(
-            "Recommended action:",
-            lead["recommendedNextAction"]
-        )
-
-        print(
-            "Timeline:"
-        )
-
-        for record in lead["records"]:
-
-            print(
-                f"  {record['dateTime']} | "
-                f"{record['recordId']} | "
-                f"{record['recordType']} | "
-                f"{record['location']}"
-            )

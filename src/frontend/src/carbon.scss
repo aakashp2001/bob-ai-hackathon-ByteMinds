@@ -1,0 +1,43 @@
+@use '@carbon/react/scss/theme';
+@use '@carbon/react/scss/themes';
+@use '@carbon/react/scss/type';
+@use '@carbon/react/scss/layout';
+@use '@carbon/react/scss/layer';
+@use '@carbon/react/scss/fonts/sans' as sans;
+@use '@carbon/react/scss/fonts/mono' as mono;
+@use '@carbon/react/scss/components/button';
+@use '@carbon/react/scss/components/tag';
+@use '@carbon/react/scss/components/tile';
+@use '@carbon/react/scss/components/inline-loading';
+@use '@carbon/react/scss/components/notification';
+@use '@carbon/react/scss/components/data-table';
+
+:root { @include theme.theme(themes.$g10); }
+@include sans.regular($styles: (normal), $unicode-ranges: (Latin1));
+@include sans.semibold($styles: (normal), $unicode-ranges: (Latin1));
+@include mono.regular($styles: (normal), $unicode-ranges: (Latin1));
+
+.case-tile { padding: 0; background: var(--cds-layer-01); }
+.case-section { border: 1px solid var(--cds-border-subtle-01); }
+.cds--btn { max-width: 100%; white-space: normal; }
+.cds--btn.mt-4 { margin-top: 1rem; }
+.cds--tag { margin: 0; height: auto; min-height: 1.5rem; max-width: 100%; }
+.cds--tag__label { white-space: normal; overflow-wrap: anywhere; }
+.cds--inline-notification { max-width: 100%; }
+.case-record-table.cds--data-table td,
+.case-record-table.cds--data-table th { height: auto; white-space: normal; overflow-wrap: anywhere; padding: 1rem; }
+.case-record-table.cds--data-table tbody th { background: white; font-family: 'IBM Plex Mono', monospace; }
+
+/* Keep the existing responsive shell while applying Carbon's neutral palette. */
+.app-sidebar { background: #161616; }
+.app-sidebar nav { padding-left: 0; padding-right: 0; }
+.app-sidebar nav a { border-radius: 0; padding-left: 1.5rem; }
+.app-sidebar nav a[aria-current='page'] { background: #393939; box-shadow: inset 3px 0 0 #0f62fe; }
+.app-sidebar nav a:hover { background: #353535; }
+.app-sidebar [class*='text-slate-400'] { color: #c6c6c6; }
+.app-shell main article:not(.appeal-document),
+.app-shell main .rounded-lg { border-radius: 0; }
+.app-shell main [class*='text-[#193b5b]'] { color: #0f62fe; }
+.app-shell main [class*='border-[#547996]'],
+.app-shell main [class*='border-l-[#547996]'] { border-left-color: #0f62fe; }
+.app-shell main [class*='bg-[#f5f8fb]'] { background: #edf5ff; }

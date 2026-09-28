@@ -1,44 +1,134 @@
 [
   {
-    "sightingId": "C001",
-    "cameraLocation": "Riverfront Pedestrian Bridge",
+    "cctvId": "C001",
     "dateTime": "2026-09-23T18:36:00",
-    "description": "Person wearing a blue hoodie and black jeans walking toward the pedestrian bridge.",
-    "imageUrl": null
+    "cameraLocation": "Riverfront Pedestrian Bridge, Ahmedabad",
+    "description": "CCTV shows a person wearing a blue hoodie and black jeans near the pedestrian bridge.",
+    "imageUrl": "mock://cctv/C001",
+    "observedName": null,
+    "location": "Riverfront Pedestrian Bridge, Ahmedabad",
+    "clothing": {
+      "top": "blue hoodie",
+      "bottom": "black jeans",
+      "footwear": null,
+      "backpack": null
+    },
+    "physical": {
+      "heightCm": null,
+      "build": null,
+      "hair": null,
+      "eyes": null,
+      "identifyingMark": null
+    }
   },
   {
-    "sightingId": "C002",
-    "cameraLocation": "Central Bus Stop",
+    "cctvId": "C002",
     "dateTime": "2026-09-23T19:08:00",
-    "description": "Person wearing dark clothing standing near the bus stop.",
-    "imageUrl": null
+    "cameraLocation": "Central Bus Stop, Ahmedabad",
+    "description": "CCTV shows a person in dark clothing near the central bus stop.",
+    "imageUrl": "mock://cctv/C002",
+    "observedName": null,
+    "location": "Central Bus Stop, Ahmedabad",
+    "clothing": {
+      "top": "dark clothing",
+      "bottom": null,
+      "footwear": null,
+      "backpack": null
+    },
+    "physical": {
+      "heightCm": null,
+      "build": null,
+      "hair": null,
+      "eyes": null,
+      "identifyingMark": null
+    }
   },
   {
-    "sightingId": "C003",
-    "cameraLocation": "East River Road",
+    "cctvId": "C003",
     "dateTime": "2026-09-23T18:55:00",
-    "description": "Person carrying a black backpack with a grey stripe.",
-    "imageUrl": null
+    "cameraLocation": "East River Road, Ahmedabad",
+    "description": "CCTV shows a person carrying a black backpack with a grey stripe on East River Road.",
+    "imageUrl": "mock://cctv/C003",
+    "observedName": null,
+    "location": "East River Road, Ahmedabad",
+    "clothing": {
+      "top": null,
+      "bottom": null,
+      "footwear": null,
+      "backpack": "black backpack with grey stripe"
+    },
+    "physical": {
+      "heightCm": null,
+      "build": null,
+      "hair": null,
+      "eyes": null,
+      "identifyingMark": null
+    }
   },
   {
-    "sightingId": "C004",
-    "cameraLocation": "Railway Station Gate 2",
+    "cctvId": "C004",
     "dateTime": "2026-09-23T20:18:00",
-    "description": "Person wearing a red jacket and dark trousers.",
-    "imageUrl": null
+    "cameraLocation": "Railway Station Gate 2, Ahmedabad",
+    "description": "CCTV shows a person wearing a red jacket and dark trousers near Railway Station Gate 2.",
+    "imageUrl": "mock://cctv/C004",
+    "observedName": null,
+    "location": "Railway Station Gate 2, Ahmedabad",
+    "clothing": {
+      "top": "red jacket",
+      "bottom": "dark trousers",
+      "footwear": null,
+      "backpack": null
+    },
+    "physical": {
+      "heightCm": null,
+      "build": null,
+      "hair": null,
+      "eyes": null,
+      "identifyingMark": null
+    }
   },
   {
-    "sightingId": "C005",
-    "cameraLocation": "Riverfront Parking",
+    "cctvId": "C005",
     "dateTime": "2026-09-23T18:20:00",
-    "description": "Person with black hair and medium build walking away from the riverfront.",
-    "imageUrl": null
+    "cameraLocation": "Riverfront Parking, Ahmedabad",
+    "description": "CCTV shows a person with black hair and medium build near Riverfront Parking.",
+    "imageUrl": "mock://cctv/C005",
+    "observedName": null,
+    "location": "Riverfront Parking, Ahmedabad",
+    "clothing": {
+      "top": null,
+      "bottom": null,
+      "footwear": null,
+      "backpack": null
+    },
+    "physical": {
+      "heightCm": null,
+      "build": "medium",
+      "hair": "black",
+      "eyes": null,
+      "identifyingMark": null
+    }
   },
   {
-    "sightingId": "C006",
-    "cameraLocation": "Shopping Complex",
+    "cctvId": "C006",
     "dateTime": "2026-09-23T21:28:00",
-    "description": "Person carrying a black backpack entering the complex.",
-    "imageUrl": null
+    "cameraLocation": "Shopping Complex, Ahmedabad",
+    "description": "CCTV shows a person carrying a black backpack entering the shopping complex.",
+    "imageUrl": "mock://cctv/C006",
+    "observedName": null,
+    "location": "Shopping Complex, Ahmedabad",
+    "clothing": {
+      "top": null,
+      "bottom": null,
+      "footwear": null,
+      "backpack": "black backpack"
+    },
+    "physical": {
+      "heightCm": null,
+      "build": null,
+      "hair": null,
+      "eyes": null,
+      "identifyingMark": null
+    }
   }
 ]

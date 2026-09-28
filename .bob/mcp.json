@@ -5,7 +5,7 @@
       "args": ["src/mcp/server.js"],
       "cwd": ".",
       "env": {
-        "BACKEND_BASE_URL": "http://localhost:8000",
+        "BACKEND_BASE_URL": "http://127.0.0.1:8000",
         "BACKEND_TIMEOUT_MS": "10000",
         "DEFAULT_CASE_NUMBER": "MP-2026-0042"
       },

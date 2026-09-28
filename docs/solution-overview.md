@@ -9,7 +9,7 @@
 [Explain the core mechanism step by step. A numbered list or simple flow works well here.]
 
 1. [Step 1: e.g., "User connects their GitHub repository via OAuth"]
-2. [Step 2: e.g., "The system ingests pipeline logs and feeds them to watsonx.ai"]
+2. The system sends verified case context and deterministic leads to the NVIDIA API for explanations and documents.
 3. [Step 3: e.g., "An anomaly score is computed and displayed on the dashboard"]
 4. [Step 4: e.g., "Alerts are sent to Slack when the score exceeds a threshold"]
 
@@ -20,7 +20,7 @@
 [Optionally include a simple ASCII or Mermaid diagram here for quick reference.]
 
 ```
-[User] → [Frontend: React] → [API: FastAPI] → [watsonx.ai] → [Dashboard]
+[User] → [Frontend: React] → [API: FastAPI] → [NVIDIA API] → [Dashboard]
                                     ↓
                              [PostgreSQL DB]
 ```
@@ -29,7 +29,7 @@
 
 | Decision | Rationale |
 |---|---|
-| [e.g., Used watsonx.ai for anomaly detection] | [e.g., Pre-trained models reduced time-to-value vs. building from scratch] |
+| NVIDIA API | Generates explanations and documents without changing deterministic backend scores |
 | [Decision 2] | [Rationale 2] |
 | [Decision 3] | [Rationale 3] |
 
@@ -37,5 +37,5 @@
 
 [Explain specifically HOW you used each IBM technology — not just that you used it.]
 
-- **[IBM Tech 1, e.g., watsonx.ai]:** [How it was used — e.g., "Used the `ibm/granite-13b-instruct-v2` model via the Python SDK to classify anomaly types from log text."]
+- **NVIDIA API:** Used through the OpenAI-compatible chat completions endpoint with `openai/gpt-oss-20b` for Bob-generated explanations, public appeals, and structured case files.
 - **[IBM Tech 2]:** [How it was used]
